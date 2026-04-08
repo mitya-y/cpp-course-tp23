@@ -1,0 +1,199 @@
+\documentclass{beamer}
+\usepackage{hyperref}
+\usepackage[russian]{babel}
+\usepackage{fontspec}
+
+\usepackage{latexsym,amsmath,xcolor,multicol,booktabs,calligra}
+\usepackage{graphicx,listings,stackengine}
+\usepackage{array}
+
+\setmainfont{CMU Serif}
+\setsansfont{CMU Sans Serif}
+\setmonofont{CMU Typewriter Text}
+
+\author{Пучкин Станислав (СПбГУ)}
+\title{Лямбды в C++}
+\subtitle{Замыкания, захват, generic lambdas, type erasure}
+\institute{C++ Семинар}
+\date{\today}
+\usepackage{CNU}
+
+\AtBeginSection[]{}
+\AtBeginSubsection[]{}
+
+\definecolor{deepblue}{rgb}{0,0,0.5}
+\definecolor{deepred}{rgb}{0.6,0,0}
+\definecolor{deepgreen}{rgb}{0,0.5,0}
+\definecolor{halfgray}{gray}{0.55}
+
+\lstset{
+    basicstyle=\ttfamily\scriptsize,
+    keywordstyle=\bfseries\color{deepblue},
+    emphstyle=\ttfamily\color{deepred},
+    stringstyle=\color{deepgreen},
+    commentstyle=\itshape\color{deepred},
+    breaklines=true,
+    columns=fixed,
+    keepspaces=true,
+    numbers=left,
+    numberstyle=\tiny\color{halfgray},
+    rulesepcolor=\color{red!20!green!20!blue!20},
+    frame=shadowbox,
+    language=C++
+}
+
+\begin{document}
+
+\begin{frame}
+    \titlepage
+\end{frame}
+
+% ----------------------------------------------------------------
+\begin{frame}[fragile]{Лямбда — объект замыкания}
+\begin{lstlisting}
+// Без захвата: анонимная структура + приведение к func*
+auto adder = [](int x, int y) { return x + y; };
+
+// Компилятор генерирует примерно:
+struct Closure {
+    static int func(int x, int y) { return x + y; }
+    operator decltype(&func)() const { return func; }
+};
+// Поэтому работает неявное приведение:
+int (*pf)(int, int) = adder;      // ok
+
+// Тип уникален — переприсвоить нельзя:
+auto f = []{};
+f = []{};  // ошибка: несовместимые типы
+
+// Unary+ форсирует приведение к func* (positive hack):
+auto g = +[]{};
+g = []{};  // ok — g теперь указатель на функцию
+\end{lstlisting}
+\end{frame}
+
+% ----------------------------------------------------------------
+\begin{frame}[fragile]{Что и как захватывается}
+\begin{lstlisting}
+int g = 1;
+void foo(int b) {
+    int x = 10; static int s = 2;
+
+    // [=]: копии x,b; s,g — прямой доступ (не захват)
+    auto lam = [=] { return x + b + s + g; };
+    x = 99;          // не влияет: копии сделаны
+    std::cout << lam();  // 10 + b + 2 + 1
+
+    // [&]: ссылки на x,b; s,g — прямой доступ
+    auto lam2 = [&] { return x + b; };
+    x = 99;
+    std::cout << lam2(); // 99 + b
+}
+// Правило: захватывается только локальный
+// нестатический контекст. static и глобальные
+// доступны напрямую и изменения в них всегда видны.
+\end{lstlisting}
+\end{frame}
+
+% ----------------------------------------------------------------
+\begin{frame}[fragile]{mutable и захват с переименованием}
+\begin{lstlisting}
+// [a] → operator() const: нельзя менять копию
+// [a]() mutable → без const: можно
+auto counter = [a = 0]() mutable { return ++a; };
+// counter() → 1, counter() → 2, ...
+
+// Захват по const-ссылке: нужно переименование (C++14)
+int x = 5;
+auto lmd = [&rx = std::as_const(x), vx = x] {
+    return vx + rx;  // rx: const int&
+};
+// lmd() → 10, но rx нельзя изменить
+
+// Move-захват (C++14 init-capture)
+auto ptr = std::make_unique<int>(42);
+auto f = [p = std::move(ptr)]() { return *p; };
+// ptr == nullptr после move
+// f() == 42
+\end{lstlisting}
+\end{frame}
+
+% ----------------------------------------------------------------
+\begin{frame}[fragile]{Generic lambdas (C++14 / C++20)}
+\begin{lstlisting}
+// C++14: auto-параметр → шаблонный operator()
+auto adder = [](auto x, auto y) { return x + y; };
+adder(1, 2);      // int   → 3
+adder(1.5, 2.5);  // double → 4.0
+
+// C++20: явные шаблонные параметры + concepts
+template <typename T, typename U>
+concept Addable = requires(T t, U u) { t + u; };
+
+auto typed = []<typename T, typename U>(T x, U y)
+    requires Addable<T, U> { return x + y; };
+
+typed(1, 2);       // ok
+// typed("a", 1);  // ошибка: нет Addable<const char*,int>
+
+// Доступ к типу T по имени внутри тела:
+auto front = []<typename T>(std::vector<T>& v) -> T& {
+    return v.front();
+};
+\end{lstlisting}
+\end{frame}
+
+% ----------------------------------------------------------------
+\begin{frame}[fragile]{``Перегрузка'' лямбд (overload trick)}
+\begin{lstlisting}
+// Наследование от нескольких лямбд (C++17)
+template <typename... F>
+struct overload : F... { using F::operator()...; };
+template<class... Ts>
+overload(Ts...) -> overload<Ts...>;  // deduction guide
+
+auto f = overload {
+    [](int i)    { std::cout << "int "    << i; },
+    [](double d) { std::cout << "double " << d; },
+};
+f(42); f(3.14);  // int 42 / double 3.14
+
+// std::variant + overload ≈ паттерн-матчинг
+std::variant<int, double, std::string> v = 3.14;
+std::visit(overload {
+    [](int i)         { std::cout << i; },
+    [](double d)      { std::cout << d; },
+    [](std::string& s){ std::cout << s; }
+}, v);  // выведет: 3.14
+\end{lstlisting}
+\end{frame}
+
+% ----------------------------------------------------------------
+\begin{frame}[fragile]{std::function: стирание типов и рекурсия}
+\begin{lstlisting}
+// auto: нулевой overhead, конкретный тип лямбды
+auto fast = [x = 5](int a) { return x + a; };
+
+// std::function: type erasure, heap indirection
+std::function<int(int)> flex = [x = 5](int a) {
+    return x + a;
+};  // внутри — void* + виртуальный вызов
+
+// Рекурсивная лямбда требует стирания типа:
+// auto fact = [&fact](int n){...}; // ошибка: fact ещё неизвестен
+std::function<int(int)> fact = [&fact](int n) {
+    return n <= 1 ? 1 : n * fact(n - 1);
+};
+fact(5);  // 120
+// Внимание: fact захвачена по ссылке — не перемещать!
+
+// Deducing this
+auto fact = [](this auto&& self, int n) -> int {
+    return n <= 1 ? 1 : n * self(n - 1);
+};
+fact(5);  // 120
+
+\end{lstlisting}
+\end{frame}
+
+\end{document}

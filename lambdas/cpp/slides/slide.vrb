@@ -1,0 +1,25 @@
+\frametitle{std::function: стирание типов и рекурсия}
+\begin{lstlisting}
+// auto: нулевой overhead, конкретный тип лямбды
+auto fast = [x = 5](int a) { return x + a; };
+
+// std::function: type erasure, heap indirection
+std::function<int(int)> flex = [x = 5](int a) {
+    return x + a;
+};  // внутри — void* + виртуальный вызов
+
+// Рекурсивная лямбда требует стирания типа:
+// auto fact = [&fact](int n){...}; // ошибка: fact ещё неизвестен
+std::function<int(int)> fact = [&fact](int n) {
+    return n <= 1 ? 1 : n * fact(n - 1);
+};
+fact(5);  // 120
+// Внимание: fact захвачена по ссылке — не перемещать!
+
+// Deducing this
+auto fact = [](this auto&& self, int n) -> int {
+    return n <= 1 ? 1 : n * self(n - 1);
+};
+fact(5);  // 120
+
+\end{lstlisting}
