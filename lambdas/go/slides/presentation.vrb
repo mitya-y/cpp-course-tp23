@@ -1,0 +1,34 @@
+\frametitle{Ошибки с горутинами}
+\begin{columns}[T, onlytextwidth]
+    \setlength{\columnsep}{0pt}
+    \begin{column}{0.45\textwidth}
+      \begin{minted}[fontsize=\footnotesize]{go}
+package main
+import (
+  "fmt"
+  "sync"
+)
+func main() {
+  var wg sync.WaitGroup
+  for i := 0; i < 15; i++ {
+    wg.Add(1)
+    go func() {
+      fmt.Print(i)
+      wg.Done()
+    }()
+  }
+  wg.Wait()
+}
+     \end{minted}
+    \end{column}
+    \begin{column}{0.55\textwidth}
+      \begin{minted}[fontsize=\footnotesize]{shell}
+$ go run ./main.go
+14652749312100811113%
+$ go run ./main.go
+14678910111213324501%
+$ go run ./main.go
+14012345678912131011%
+      \end{minted}
+    \end{column}
+  \end{columns}

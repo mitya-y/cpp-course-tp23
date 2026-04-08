@@ -1,0 +1,199 @@
+\documentclass[aspectratio=169]{beamer}
+
+\input{preamble.tex}
+
+\title[Go lambda expressions]
+{Go lambda expressions}
+
+\institute[СПбГУ]{}
+
+\author[Дмитрий Козенко]{Козенко Дмитрий Сергеевич, группа 23.Б08-мм}
+
+\begin{document}
+
+% ---------------------------------------------------------------------
+
+\begin{frame}[fragile]{Первое знакомство}
+\begin{minted}[fontsize=\small]{go}
+package main
+
+import "fmt"
+
+func main() {
+  add := func(a, b int) int {
+    return a + b
+  }
+
+  result := add(3, 4)
+  fmt.Println(result) // 7
+}
+\end{minted}
+\end{frame}
+
+% ---------------------------------------------------------------------
+
+\begin{frame}[fragile]{Передача как callback аргумент}
+\begin{minted}[fontsize=\small]{go}
+package main
+
+import "fmt"
+import "slices"
+
+func main() {
+  words := []string{"aa", "aaa", "a"}
+  slices.SortFunc(words, func(a, b string) int {
+      return len(a) - len(b)
+  })
+  fmt.Println(words) // [a aa aaa]
+}
+
+// func Slice(slice interface{}, less func(i, j int) bool)
+\end{minted}
+\end{frame}
+
+% ---------------------------------------------------------------------
+
+\begin{frame}[fragile]{Замыкания}
+\begin{minted}[fontsize=\small]{go}
+package main
+import "fmt"
+func get_generator() func() int {
+  i := 0 // 'i' will copy by reference
+  return func() int {
+    i++
+    return i
+  }
+}
+func main() {
+  a := get_generator()
+  fmt.Println(a()) // 1
+  fmt.Println(a()) // 2
+
+  b := get_generator()
+  fmt.Println(b()) // 1
+}
+\end{minted}
+\end{frame}
+
+% ---------------------------------------------------------------------
+
+\begin{frame}[fragile]{Замыкания - передача по копии или ссылке?}
+  \begin{columns}[T, onlytextwidth]
+    \setlength{\columnsep}{0pt}
+    \begin{column}{0.47\textwidth}
+      \begin{minted}[fontsize=\footnotesize]{go}
+package main
+import "fmt"
+func call(f func(bool) int) { f(true) }
+func main() {
+  i := 0
+  // 'i' will copy by reference
+  f := func(inc bool) int {
+    if inc { i++ }
+    return i
+  }
+  g := func(val int) func(bool) int {
+    return func(inc bool) int {
+      if inc { val++ }
+      return val
+    }
+  }(i)
+      \end{minted}
+    \end{column}
+    \begin{column}{0.53\textwidth}
+      \begin{minted}[fontsize=\footnotesize]{go}
+  call(f)
+  fmt.Println(i, f(false), g(false)) // 1, 1, 0
+  call(g)
+  fmt.Println(i, f(false), g(false)) // 1, 1, 1
+}
+      \end{minted}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% ---------------------------------------------------------------------
+
+\begin{frame}[fragile]{Замыкания - изучение убегания на кучу}
+  \begin{columns}[T, onlytextwidth]
+    \setlength{\columnsep}{0pt}
+    \begin{column}{0.45\textwidth}
+      \begin{minted}[fontsize=\footnotesize]{go}
+package main
+
+func EscapingClosure() func() int {
+  x := 42
+  return func() int {
+   x++
+   return x
+  }
+}
+
+func NoEscapingClosure() int {
+  y := 42
+  return func() int {
+    return y
+  }()
+}
+     \end{minted}
+    \end{column}
+    \begin{column}{0.55\textwidth}
+      \begin{minted}[fontsize=\footnotesize]{shell}
+$ go mod init example/escape
+$ go test -gcflags="-m" -bench .
+# example/escape
+./main.go:6:6: can inline EscapingClosure
+./main.go:8:10: can inline EscapingClosure.func1
+./main.go:16:10: can inline NoEscapingClosure.func1
+./main.go:14:6: can inline NoEscapingClosure
+./main.go:18:4: inlining call to
+                NoEscapingClosure.func1
+./main.go:7:3: moved to heap: x
+./main.go:8:10: func literal escapes to heap
+?   	example/escape	[no test files]
+      \end{minted}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% ---------------------------------------------------------------------
+
+\begin{frame}[fragile]{Ошибки с горутинами}
+  \begin{columns}[T, onlytextwidth]
+    \setlength{\columnsep}{0pt}
+    \begin{column}{0.45\textwidth}
+      \begin{minted}[fontsize=\footnotesize]{go}
+package main
+import (
+  "fmt"
+  "sync"
+)
+func main() {
+  var wg sync.WaitGroup
+  for i := 0; i < 15; i++ {
+    wg.Add(1)
+    go func() {
+      fmt.Print(i)
+      wg.Done()
+    }()
+  }
+  wg.Wait()
+}
+     \end{minted}
+    \end{column}
+    \begin{column}{0.55\textwidth}
+      \begin{minted}[fontsize=\footnotesize]{shell}
+$ go run ./main.go
+14652749312100811113%
+$ go run ./main.go
+14678910111213324501%
+$ go run ./main.go
+14012345678912131011%
+      \end{minted}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% ---------------------------------------------------------------------
+
+\end{document}
