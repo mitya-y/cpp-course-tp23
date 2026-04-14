@@ -1,4 +1,4 @@
-This is LuaHBTeX, Version 1.24.0 (TeX Live 2026/Arch Linux)  (format=lualatex 2026.3.25)  9 APR 2026 00:11
+This is LuaHBTeX, Version 1.24.0 (TeX Live 2026/Arch Linux)  (format=lualatex 2026.3.25)  15 APR 2026 01:13
  system commands enabled.
  file:line:error style messages enabled.
 **/home/mitya/Proga/spbu/cpp-course-tp23/lambdas/cpp/slides/slide
@@ -1081,7 +1081,7 @@ LaTeX Font Info:    Overwriting math alphabet `\mathtt' in version `bold'
 ]
 \openout4 = slide.vrb
  (./slide.vrb)
-Overfull \vbox (1.04865pt too high) detected at line 145
+Overfull \vbox (1.04865pt too high) detected at line 140
  []
 
 [5
@@ -1096,16 +1096,44 @@ Overfull \vbox (1.04865pt too high) detected at line 145
 
 ]
 \openout4 = slide.vrb
+ (./slide.vrb) [8
+
+]
+\openout4 = slide.vrb
+ (./slide.vrb) [9
+
+]
+\openout4 = slide.vrb
+ (./slide.vrb)
+Overfull \vbox (1.04865pt too high) detected at line 257
+ []
+
+[10
+
+]
+\openout4 = slide.vrb
+ (./slide.vrb)
+Overfull \vbox (1.04865pt too high) detected at line 284
+ []
+
+[11
+
+]
+\openout4 = slide.vrb
+ (./slide.vrb) [12
+
+]
+\openout4 = slide.vrb
  (./slide.vrb
 Missing character: There is no ≈ (U+2248) in font "name:CMU Typewriter Text:mode=node;script=latn;language=dflt;"!
 Missing character: There is no ≈ (U+2248) in font "name:CMU Typewriter Text:mode=node;script=latn;language=dflt;"!
-) [8
+) [13
 
 
 Missing character: There is no ≈ (U+2248) in font "name:CMU Typewriter Text:mode=node;script=latn;language=dflt;"!
 ]
 \openout4 = slide.vrb
- (./slide.vrb) [9
+ (./slide.vrb) [14
 
 ]
 \tf@nav=\write6
@@ -1127,19 +1155,19 @@ Package rerunfilecheck Info: File `slide.out' has not changed.
 )
 
 Here is how much of LuaTeX's memory you used:
- 28147 strings out of 476076
- 476954,1373583 words of node,token memory allocated
+ 28345 strings out of 476076
+ 596189,1373583 words of node,token memory allocated
  137974 words of node memory still in use:
    4888 hlist, 10 vlist, 3034 rule, 285 disc, 25 local_par, 2892 glue, 4228 kern, 35 penalty, 591 glyph, 2950 attribute, 67 glue_spec, 1476 attribute_list, 4 write, 14 pdf_literal, 2092 pdf_colorstack nodes
-   avail lists: 1:1,2:4312,3:460,4:4330,5:9175,6:88,7:9137,9:17230,10:36,11:627
- 49686 multiletter control sequences out of 65536+600000
+   avail lists: 2:4645,3:462,4:4924,5:11482,6:88,7:12310,9:21364,10:40,11:786
+ 49839 multiletter control sequences out of 65536+600000
  58 fonts using 12972567 bytes
  128i,14n,116p,454b,756s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </usr/share/texmf-dist/fonts/opentype/public/cm-unicode/cmuntb.otf></usr/share/texmf-dist/fonts/opentype/public/cm-unicode/cmuntt.otf></usr/share/texmf-dist/fonts/opentype/public/cm-unicode/cmunst.otf></usr/share/texmf-dist/fonts/opentype/public/cm-unicode/cmunss.otf></usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmtt8.pfb>
-Output written on slide.pdf (9 pages, 67351 bytes).
+Output written on slide.pdf (14 pages, 86595 bytes).
 
-PDF statistics: 335 PDF objects out of 1000 (max. 8388607)
- 273 compressed objects within 3 object streams
- 19 named destinations out of 1000 (max. 1048576)
+PDF statistics: 484 PDF objects out of 1000 (max. 8388607)
+ 405 compressed objects within 5 object streams
+ 29 named destinations out of 1000 (max. 1048576)
  126 words of extra memory for PDF output out of 10000 (max. 100000000)
 

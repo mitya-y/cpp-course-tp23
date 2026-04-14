@@ -54,11 +54,6 @@
 // Без захвата: анонимная структура + приведение к func*
 auto adder = [](int x, int y) { return x + y; };
 
-// Компилятор генерирует примерно:
-struct Closure {
-    static int func(int x, int y) { return x + y; }
-    operator decltype(&func)() const { return func; }
-};
 // Поэтому работает неявное приведение:
 int (*pf)(int, int) = adder;      // ok
 
@@ -166,6 +161,125 @@ auto ptr = std::make_unique<int>(42);
 auto f = [p = std::move(ptr)]() { return *p; };
 // ptr == nullptr после move
 // f() == 42
+\end{lstlisting}
+\end{frame}
+
+% ----------------------------------------------------------------
+\begin{frame}[fragile]{Лямбда - синтаксический сахар для анонимного функтора}
+\begin{lstlisting}
+  struct ExpectedSimpleType {
+    static int func(int c) { return c; }
+    int operator()(int c) { return func(c); }
+    operator decltype(&func)() {return func;}
+  };
+
+  auto simple_lambda = [](int x) {return x;};
+  int (*simple_lambda_ptr)(int) = simple_lambda;
+  ExpectedSimpleType est;
+  int (*est_ptr)(int) = est;
+
+  using SimpleLambdaT = decltype(simple_lambda);
+  std::println("{}, {}",
+    (*(SimpleLambdaT *)&est)(7),
+    (*(ExpectedSimpleType *)&simple_lambda)(8)); // 7, 8
+\end{lstlisting}
+\end{frame}
+
+% ----------------------------------------------------------------
+\begin{frame}[fragile]{Лямбда c захватом - анонимная структура-функтор}
+\begin{lstlisting}
+int main() {
+  struct ExpectedType {
+    int a; int &b;
+    ExpectedType(int a, int &b) : a(a), b(b) {}
+    auto operator()(int c) { a = -c; b = -(a + c); }
+  };
+
+  int b = 10;
+  auto lambda_function = [a = 0, &b](int c) mutable {
+    a = c; b = a + c;};
+  using LambdaT = decltype(lambda_function);
+  lambda_function(5);
+
+  int c = 2;
+  auto et = ExpectedType(0, c);
+
+  struct Derived : LambdaT {
+    Derived(LambdaT &t) : LambdaT(t) {}
+    // using LambdaT::operator();
+  } d(lambda_function);
+  d(5);
+
+\end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile]{Лямбда c захватом - анонимная структура-функтор}
+\begin{lstlisting}
+  std::println("a: {}, c: {}", et.a, c); // a: 0, c: 2
+  (*(LambdaT *)&et)(7);
+  std::println("a: {}, c: {}", et.a, c); // a: 7, c: 14
+
+  // a: 5, b: 10
+  std::println("a: {}, b: {}", *(int *)&lambda_function, b);
+  (*(ExpectedType *)&lambda_function)(7);
+  // a: -7, b: 0
+  std::println("a: {}, b: {}", *(int *)&lambda_function, b);
+
+  // typeid: Z4mainEUliE_
+  std::println("typeid: {}", typeid(LambdaT).name());
+}
+\end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile]{Лямбда c захватом - анонимная структура-функтор}
+\begin{lstlisting}
+$ gdb build/lambdas
+(gdb) b main
+Breakpoint 1 at 0x45b4: file .../lambdas.cpp, line 5.
+(gdb) run
+Breakpoint 1, main () at .../lambdas.cpp:5
+5	int main() {
+(gdb) n
+13	  int b = 10;
+(gdb)
+14	  auto lambda_function = [a = 0, &b](int c) mutable {a = c; b = a + c;};
+(gdb) s
+16	  lambda_function(5);
+(gdb) s
+operator() (__closure=0x7fffffffd3c0, c=5) at .../lambdas.cpp:14
+14	  auto lambda_function = [a = 0, &b](int c) mutable {a = c; b = a + c;};
+(gdb) ptype /r lambda_function
+type = struct {
+    int __a;
+    int &__b;
+}
+\end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile]{Лямбда c захватом - анонимная структура-функтор}
+\begin{lstlisting}
+(gdb) p &lambda_function
+$1 = (struct {...} *) 0x7fffffffd3c0
+(gdb) disassemble
+Dump of assembler code for function operator()(int):
+   0x00005555555584f4 <+0>:	push   %rbp
+   0x00005555555584f5 <+1>:	mov    %rsp,%rbp
+   0x00005555555584f8 <+4>:	mov    %rdi,-0x8(%rbp)
+   0x00005555555584fc <+8>:	mov    %esi,-0xc(%rbp)
+=> 0x00005555555584ff <+11>:	mov    -0x8(%rbp),%rax
+   0x0000555555558503 <+15>:	mov    -0xc(%rbp),%edx
+   0x0000555555558506 <+18>:	mov    %edx,(%rax)
+   0x0000555555558508 <+20>:	mov    -0x8(%rbp),%rax
+   0x000055555555850c <+24>:	mov    (%rax),%ecx
+   0x000055555555850e <+26>:	mov    -0x8(%rbp),%rax
+   0x0000555555558512 <+30>:	mov    0x8(%rax),%rax
+   0x0000555555558516 <+34>:	mov    -0xc(%rbp),%edx
+   0x0000555555558519 <+37>:	add    %ecx,%edx
+   0x000055555555851b <+39>:	mov    %edx,(%rax)
+   0x000055555555851d <+41>:	nop
+   0x000055555555851e <+42>:	pop    %rbp
+   0x000055555555851f <+43>:	ret
+End of assembler dump.
 \end{lstlisting}
 \end{frame}
 
